@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EchoTag • BLE Controller</title>
+  <style>
+    :root {
+      --bg-top: #0b1120;
+      --bg-bottom: #111827;
+      --card-bg: rgba(30, 41, 59, 0.88);
+      --card-border: rgba(148, 163, 184, 0.16);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --blue: #3b82f6;
+      --blue-hover: #2563eb;
+      --green: #22c55e;
+      --green-hover: #16a34a;
+      --red: #ef4444;
+      --red-hover: #dc2626;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.18), transparent 55%),
+        linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .app-card {
+      width: 100%;
+      max-width: 410px;
+      background: var(--card-bg);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 26px 22px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .icon-box {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(34, 197, 94, 0.2));
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: grid;
+      place-items: center;
+      font-size: 1.25rem;
+    }
+
+    .title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin: 0;
+      letter-spacing: -0.01em;
+    }
+
+    .subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin: 2px 0 0;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      color: #cbd5e1;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #64748b;
+    }
+
+    .status-pill.connected {
+      background: rgba(34, 197, 94, 0.14);
+      border-color: rgba(34, 197, 94, 0.35);
+      color: #86efac;
+    }
+
+    .status-pill.connected .dot {
+      background: var(--green);
+      box-shadow: 0 0 10px var(--green);
+    }
+
+    .status-pill.ringing {
+      background: rgba(234, 179, 8, 0.16);
+      border-color: rgba(234, 179, 8, 0.45);
+      color: #fde047;
+    }
+
+    .status-pill.ringing .dot {
+      background: #facc15;
+      animation: pulse 0.9s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.45); opacity: 0.55; }
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+      margin-top: 8px;
+    }
+
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    button {
+      border: none;
+      border-radius: 14px;
+      padding: 14px 16px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #fff;
+      cursor: pointer;
+      transition: transform 0.12s ease, background-color 0.15s ease, opacity 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    button:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+
+    button:disabled {
+      opacity: 0.38;
+      cursor: not-allowed;
+    }
+
+    .btn-connect {
+      width: 100%;
+      background: var(--blue);
+    }
+
+    .btn-connect:hover:not(:disabled) {
+      background: var(--blue-hover);
+    }
+
+    .btn-connect.is-connected {
+      background: rgba(51, 65, 85, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+    }
+
+    .btn-ring {
+      background: var(--green);
+    }
+
+    .btn-ring:hover:not(:disabled) {
+      background: var(--green-hover);
+    }
+
+    .btn-stop {
+      background: var(--red);
+    }
+
+    .btn-stop:hover:not(:disabled) {
+      background: var(--red-hover);
+    }
+
+    .options-row {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(148, 163, 184, 0.14);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.83rem;
+      color: var(--text-muted);
+    }
+
+    .toggle-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .log-box {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(148, 163, 184, 0.1);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.76rem;
+      color: #cbd5e1;
+      line-height: 1.45;
+    }
+  </style>
+</head>
+<body>
+  <main class="app-card">
+    <div class="header">
+      <div class="brand">
+        <div class="icon-box">🔑</div>
+        <div>
+          <h1 class="title">Echotag</h1>
+          <p class="subtitle">ESP32-C3 • BLE Smart Tag</p>
+        </div>
+      </div>
+      <div id="statusPill" class="status-pill">
+        <span class="dot"></span>
+        <span id="statusText">Terputus</span>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="btnConnect" class="btn-connect">
+        <span id="connectLabel">Hubungkan BLE</span>
+      </button>
+
+      <div class="action-grid">
+        <button id="btnRing" class="btn-ring" disabled>
+          <span>🔊 Bunyikan</span>
+        </button>
+        <button id="btnStop" class="btn-stop" disabled>
+          <span>🔇 Matikan</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="options-row">
+      <label class="toggle-label">
+        <input type="checkbox" id="autoStopToggle" checked />
+        <span>Auto-stop bunyi (15 detik)</span>
+      </label>
+      <span id="deviceInfo">Belum tersambung</span>
+    </div>
+
+    <div id="logBox" class="log-box">Siap menghubungkan ke Echotag...</div>
+  </main>
+
+  <script>
+    const DEVICE_NAME  = "EchoTag";
+    const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
+    const CHAR_UUID    = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
+
+    let device = null;
+    let characteristic = null;
+    let autoStopTimer = null;
+
+    const statusPill = document.getElementById("statusPill");
+    const statusText = document.getElementById("statusText");
+    const deviceInfo = document.getElementById("deviceInfo");
+    const logBox = document.getElementById("logBox");
+    const btnConnect = document.getElementById("btnConnect");
+    const connectLabel = document.getElementById("connectLabel");
+    const btnRing = document.getElementById("btnRing");
+    const btnStop = document.getElementById("btnStop");
+    const autoStopToggle = document.getElementById("autoStopToggle");
+
+    function setLog(msg) {
+      const now = new Date().toLocaleTimeString("id-ID", { hour12: false });
+      logBox.textContent = `[${now}] ${msg}`;
+    }
+
+    function clearAutoStop() {
+      if (autoStopTimer) {
+        clearTimeout(autoStopTimer);
+        autoStopTimer = null;
+      }
+    }
+
+    function updateState(state, detail = "") {
+      btnRing.disabled = state === "disconnected";
+      btnStop.disabled = state === "disconnected";
+
+      if (state === "disconnected") {
+        clearAutoStop();
+        statusPill.className = "status-pill";
+        statusText.textContent = "Terputus";
+        connectLabel.textContent = "Hubungkan BLE";
+        btnConnect.classList.remove("is-connected");
+        deviceInfo.textContent = "Belum tersambung";
+      } else if (state === "connected") {
+        statusPill.className = "status-pill connected";
+        statusText.textContent = "Terhubung";
+        connectLabel.textContent = "Putuskan Koneksi";
+        btnConnect.classList.add("is-connected");
+        deviceInfo.textContent = detail || DEVICE_NAME;
+      } else if (state === "ringing") {
+        statusPill.className = "status-pill ringing";
+        statusText.textContent = "Berbunyi";
+        connectLabel.textContent = "Putuskan Koneksi";
+        btnConnect.classList.add("is-connected");
+      }
+    }
+
+    async function sendCommand(cmd) {
+      if (!characteristic) return;
+      try {
+        await characteristic.writeValue(new TextEncoder().encode(cmd));
+        clearAutoStop();
+
+        if (cmd === "1") {
+          updateState("ringing", device?.name || DEVICE_NAME);
+          setLog("Perintah '1' dikirim → Buzzer menyala.");
+
+          if (autoStopToggle.checked) {
+            autoStopTimer = setTimeout(() => {
+              sendCommand("0");
+            }, 15000);
+          }
+        } else {
+          updateState("connected", device?.name || DEVICE_NAME);
+          setLog("Perintah '0' dikirim → Buzzer dimatikan.");
+        }
+      } catch (err) {
+        setLog(`Gagal mengirim perintah: ${err.message}`);
+      }
+    }
+
+    btnConnect.addEventListener("click", async () => {
+      try {
+        if (device && device.gatt.connected) {
+          device.gatt.disconnect();
+          updateState("disconnected");
+          setLog("Koneksi BLE diputuskan.");
+          return;
+        }
+
+        if (!navigator.bluetooth) {
+          setLog("Browser tidak mendukung Web Bluetooth. Gunakan Google Chrome.");
+          return;
+        }
+
+        setLog("Membuka pemindai BLE...");
+        device = await navigator.bluetooth.requestDevice({
+          filters: [{ name: DEVICE_NAME }],
+          optionalServices: [SERVICE_UUID]
+        });
+
+        device.addEventListener("gattserverdisconnected", () => {
+          characteristic = null;
+          updateState("disconnected");
+          setLog("Perangkat BLE terputus.");
+        });
+
+        setLog(`Menghubungkan ke ${device.name || DEVICE_NAME}...`);
+        const server = await device.gatt.connect();
+        const service = await server.getPrimaryService(SERVICE_UUID);
+        characteristic = await service.getCharacteristic(CHAR_UUID);
+
+        updateState("connected", device.name || DEVICE_NAME);
+        setLog(`Terhubung ke ${device.name || DEVICE_NAME}. Siap digunakan!`);
+      } catch (err) {
+        updateState("disconnected");
+        setLog(`Info: ${err.message}`);
+      }
+    });
+
+    btnRing.addEventListener("click", () => sendCommand("1"));
+    btnStop.addEventListener("click", () => sendCommand("0"));
+  </script>
+</body>
+</html>
